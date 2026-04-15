@@ -32,7 +32,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-[#050505] flex items-center justify-center relative overflow-hidden selection:bg-[#00D6FF] selection:text-black px-6">
-      
+
       {/* 
         ==============================
         BACKGROUND & ANIMATION LAYER
@@ -43,7 +43,8 @@ export default function LoginPage() {
 
       {/* Decorative CSS Ring Animation */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] md:w-[800px] md:h-[800px] flex justify-center items-center pointer-events-none z-0 opacity-50">
-        <style dangerouslySetInnerHTML={{ __html: `
+        <style dangerouslySetInnerHTML={{
+          __html: `
           .anim-ring { position: absolute; inset: 0; border: 1px solid rgba(0, 214, 255, 0.15); transition: 0.5s; }
           .anim-ring.layer-1 { border-radius: 38% 62% 63% 37% / 41% 44% 56% 59%; animation: spin1 20s linear infinite; }
           .anim-ring.layer-2 { border-radius: 41% 44% 56% 59% / 38% 62% 63% 37%; animation: spin1 15s linear infinite; }
@@ -64,16 +65,16 @@ export default function LoginPage() {
         ==============================
       */}
       <div className="relative z-10 w-full max-w-[440px] flex flex-col items-center">
-        
+
         {/* Brand Logo Header */}
         <div className="flex items-center gap-3 mb-8">
-          <Image src="/assets/logo.png" alt="AquaBuddy" width={48} height={48} className="w-12 h-12 object-contain invert brightness-0" priority />
+          <Image src="\src\app\favicon.ico" alt="AquaBuddy" width={48} height={48} className="w-12 h-12 object-contain invert brightness-0" priority />
           <span className="text-2xl tracking-[0.2em] font-light uppercase text-white">AquaBuddy</span>
         </div>
 
         {/* Glassmorphism Card */}
         <div className="w-full bg-[#111111]/60 backdrop-blur-3xl border border-white/10 rounded-3xl p-8 md:p-10 shadow-[0_0_80px_rgba(0,102,204,0.15)] relative overflow-hidden">
-          
+
           {/* Internal soft top glow for premium glass feel */}
           <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#00D6FF]/30 to-transparent" />
 
@@ -90,16 +91,16 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleLogin} className="space-y-6">
-            
+
             {/* Email Input */}
             <div className="space-y-2">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 ml-1">Email Address</label>
               <div className="relative group">
-                <input 
-                  type="email" 
+                <input
+                  type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="name@company.com" 
+                  placeholder="name@company.com"
                   className="w-full px-5 py-3.5 bg-black/40 border border-white/10 rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#00D6FF] focus:border-[#00D6FF] transition-all"
                 />
               </div>
@@ -109,14 +110,14 @@ export default function LoginPage() {
             <div className="space-y-2">
               <label className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 ml-1">Password</label>
               <div className="relative group">
-                <input 
-                  type={showPassword ? "text" : "password"} 
+                <input
+                  type={showPassword ? "text" : "password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  placeholder="••••••••" 
+                  placeholder="••••••••"
                   className="w-full pl-5 pr-12 py-3.5 bg-black/40 border border-white/10 rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#00D6FF] focus:border-[#00D6FF] transition-all"
                 />
-                <button 
+                <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
                   className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-500 hover:text-white transition-colors focus:outline-none"
@@ -133,26 +134,26 @@ export default function LoginPage() {
                   <input type="checkbox" className="peer absolute opacity-0 w-full h-full cursor-pointer" />
                   <div className="absolute inset-0 bg-[#00D6FF] rounded opacity-0 peer-checked:opacity-100 transition-opacity flex items-center justify-center">
                     <svg width="8" height="6" viewBox="0 0 10 8" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M1 4L3.5 6.5L9 1" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                      <path d="M1 4L3.5 6.5L9 1" stroke="black" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
                 </div>
                 <span className="text-xs text-gray-400 group-hover:text-gray-300 transition-colors select-none">Remember me</span>
               </label>
-              
+
               <Link href="#" className="text-xs text-gray-400 hover:text-[#00D6FF] transition-colors">
                 Forgot password?
               </Link>
             </div>
 
             {/* Submit Button */}
-            <button 
+            <button
               disabled={isLoading}
-              type="submit" 
+              type="submit"
               className="w-full flex items-center justify-center gap-2 py-3.5 mt-8 bg-white text-black hover:bg-gray-200 disabled:opacity-70 disabled:hover:bg-white rounded-xl font-bold transition-all relative overflow-hidden group shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_25px_rgba(255,255,255,0.2)]"
             >
               {isLoading ? (
-                 <Loader2 className="w-5 h-5 animate-spin relative z-10" />
+                <Loader2 className="w-5 h-5 animate-spin relative z-10" />
               ) : (
                 <>
                   <span className="relative z-10 text-sm">Sign In</span>
@@ -165,9 +166,9 @@ export default function LoginPage() {
 
         {/* Footer Text */}
         <p className="mt-8 text-center text-sm text-gray-500 font-light">
-          Don't have an account? <Link href="/register" className="text-white hover:text-[#00D6FF] font-medium transition-colors">Register device</Link>
+          Don&apos;t have an account? <Link href="/register" className="text-white hover:text-[#00D6FF] font-medium transition-colors">Register device</Link>
         </p>
-        
+
       </div>
     </div>
   );

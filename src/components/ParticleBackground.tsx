@@ -10,7 +10,7 @@ export const ParticleBackground = () => {
     useEffect(() => {
         if (!containerRef.current) return;
 
-        let scene: THREE.Scene, camera: THREE.PerspectiveCamera, renderer: THREE.WebGLRenderer, particles: THREE.Points;
+        let particles: THREE.Points;
         const count = 12000;
         let currentState = 'scattered';
         let animationFrameId: number;
@@ -19,11 +19,11 @@ export const ParticleBackground = () => {
         const width = container.clientWidth;
         const height = container.clientHeight;
 
-        scene = new THREE.Scene();
-        camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
         camera.position.z = 25;
 
-        renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
         renderer.setSize(width, height);
         renderer.setClearColor(0x000000, 0); // Transparent background
         container.appendChild(renderer.domElement);

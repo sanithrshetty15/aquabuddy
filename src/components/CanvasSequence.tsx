@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { motion, useScroll, useTransform, AnimatePresence } from "framer-motion";
+import { motion, useScroll, useTransform, MotionValue } from "framer-motion";
 import { ArrowRight } from "lucide-react";
 import Link from "next/link";
 
@@ -178,7 +178,7 @@ export const CanvasSequence = () => {
 };
 
 // Sub-component for individual narrative steps
-const StepContent = ({ step, progress }: { step: typeof NARRATIVE_STEPS[0], progress: any }) => {
+const StepContent = ({ step, progress }: { step: typeof NARRATIVE_STEPS[0], progress: MotionValue<number> }) => {
   // Clamp ranges to [0, 1] and ensure they are unique and increasing
   const range = [
     Math.max(0, step.range[0] - 0.05),
@@ -217,7 +217,7 @@ const StepContent = ({ step, progress }: { step: typeof NARRATIVE_STEPS[0], prog
 };
 
 // Final Phase CTA transition
-const FinalCTA = ({ progress }: { progress: any }) => {
+const FinalCTA = ({ progress }: { progress: MotionValue<number> }) => {
   const opacity = useTransform(progress, [0.88, 0.95], [0, 1]);
   const y = useTransform(progress, [0.88, 0.95], [20, 0]);
 
