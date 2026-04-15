@@ -74,8 +74,7 @@ export const ParticleBackground = () => {
             const padding = 20;
 
             ctx.font = `bold ${fontSize}px Arial`;
-            const textMetrics = ctx.measureText(text);
-            const textWidth = textMetrics.width;
+            const textWidth = ctx.measureText(text).width;
             const textHeight = fontSize;
 
             canvas.width = textWidth + padding * 2;
@@ -89,7 +88,7 @@ export const ParticleBackground = () => {
 
             const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
             const pixels = imageData.data;
-            const points = [];
+            const points: { x: number; y: number }[] = [];
             const threshold = 128;
 
             for (let i = 0; i < pixels.length; i += 4) {
