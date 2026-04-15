@@ -134,7 +134,7 @@ export const DashboardShell = ({ children }: { children: React.ReactNode }) => {
         </AnimatePresence>
 
         {/* Main Content Viewport */}
-        <main className="flex-1 w-full pb-20 md:pb-12 bg-[#050505]">
+        <main className="flex-1 w-full pb-20 md:pb-12 bg-[#050505] min-h-[calc(100vh-200px)]">
           {children}
         </main>
       </div>
