@@ -54,8 +54,8 @@ export default function LoginPage() {
         `}} />
         <div className="relative w-full h-full">
           <i className="anim-ring layer-1" />
-          <i className="anim-ring layer-2" style={{ borderColor: 'rgba(0, 102, 204, 0.15)' }} />
-          <i className="anim-ring layer-3" style={{ borderColor: 'rgba(255, 255, 255, 0.05)' }} />
+          <i className="anim-ring layer-2" style={{ borderColor:"rgba(0, 102, 204, 0.15)" }} />
+          <i className="anim-ring layer-3" style={{ borderColor: "rgba(255, 255, 255, 0.05)" }} />
         </div>
       </div>
 
