@@ -7,8 +7,9 @@ export default function Plans() {
       <Navbar />
       <div className="flex-1 flex flex-col items-center justify-center p-8 text-center pb-24">
          <h1 className="text-4xl md:text-5xl font-bold mb-4 tracking-tight">Simple, Transparent Pricing</h1>
-         <p className="text-xl text-gray-400 max-w-2xl font-light mb-16">Choose the system that fits your household&apos;s water independence goals.</p>
-         
+<p className="text-xl text-gray-400 max-w-2xl font-light mb-16">
+  {"Choose the system that fits your household's water independence goals."}
+</p>         
          <div className="flex gap-8 max-w-5xl w-full flex-col md:flex-row justify-center items-center md:items-stretch">
             <div className="border border-white/10 bg-white/5 p-8 rounded-3xl w-full max-w-[350px] text-left flex flex-col">
                 <h3 className="text-2xl font-bold mb-2">AquaBuddy Basic</h3>
