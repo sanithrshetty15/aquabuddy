@@ -68,7 +68,7 @@ export default function LoginPage() {
 
         {/* Brand Logo Header */}
         <div className="flex items-center gap-3 mb-8">
-          <Image src="\src\app\favicon.ico" alt="AquaBuddy" width={48} height={48} className="w-12 h-12 object-contain invert brightness-0" priority />
+          <Image src="/favicon.ico" alt="AquaBuddy" width={48} height={48} className="w-12 h-12 object-contain invert brightness-0" priority />
           <span className="text-2xl tracking-[0.2em] font-light uppercase text-white">AquaBuddy</span>
         </div>
 
