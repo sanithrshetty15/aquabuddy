@@ -1,20 +1,14 @@
-warn The configuration property `package.json#prisma` is deprecated and will be removed in Prisma 7. Please migrate to a Prisma config file (e.g., `prisma.config.ts`).
-For more information, see: https://pris.ly/prisma-config
-
--- CreateSchema
-CREATE SCHEMA IF NOT EXISTS "public";
-
 -- CreateEnum
 CREATE TYPE "UserRole" AS ENUM ('OWNER', 'ADMIN', 'USER');
 
 -- CreateEnum
-CREATE TYPE "RobotStatus" AS ENUM ('ACTIVE', 'INACTIVE', 'MAINTENANCE', 'ERROR');
+CREATE TYPE "RobotStatus" AS ENUM ('MANUFACTURED', 'TESTING', 'READY', 'ACTIVATED', 'ONLINE', 'OFFLINE', 'MAINTENANCE', 'FIRMWARE_UPDATE', 'SERVICE', 'RETIRED');
 
 -- CreateEnum
-CREATE TYPE "CommandStatus" AS ENUM ('PENDING', 'EXECUTED', 'FAILED');
+CREATE TYPE "CommandStatus" AS ENUM ('PENDING', 'ACCEPTED', 'EXECUTING', 'COMPLETED', 'FAILED', 'TIMEOUT', 'CANCELLED');
 
 -- CreateEnum
-CREATE TYPE "AlertType" AS ENUM ('TEMPERATURE_HIGH', 'HUMIDITY_LOW', 'TANK_FULL', 'SYSTEM_ERROR', 'LEAK_DETECTED');
+CREATE TYPE "AlertType" AS ENUM ('TEMPERATURE_HIGH', 'HUMIDITY_LOW', 'TANK_FULL', 'TANK_EMPTY', 'SYSTEM_ERROR', 'LEAK_DETECTED', 'BATTERY_LOW', 'PUMP_FAILURE', 'RELAY_FAILURE', 'SENSOR_FAILURE', 'OBSTACLE_DETECTED', 'IR_TRIGGERED', 'COMMUNICATION_LOST', 'EMERGENCY_STOP', 'FIRMWARE_FAILURE');
 
 -- CreateEnum
 CREATE TYPE "AlertSeverity" AS ENUM ('INFO', 'WARNING', 'CRITICAL');
@@ -39,6 +33,15 @@ CREATE TYPE "NotificationPriority" AS ENUM ('LOW', 'NORMAL', 'HIGH', 'URGENT');
 
 -- CreateEnum
 CREATE TYPE "RevenueType" AS ENUM ('SUBSCRIPTION', 'ONE_TIME', 'MAINTENANCE', 'FIRMWARE', 'OTHER');
+
+-- CreateEnum
+CREATE TYPE "FactoryTestType" AS ENUM ('SENSOR_TEST', 'RELAY_TEST', 'PUMP_TEST', 'FAN_TEST', 'DISPLAY_TEST', 'WIFI_TEST', 'POWER_TEST', 'BATTERY_TEST', 'MOVEMENT_TEST', 'OBSTACLE_DETECTION', 'IR_DETECTION', 'WATER_COLLECTION_TEST', 'CALIBRATION_TEST');
+
+-- CreateEnum
+CREATE TYPE "TestStatus" AS ENUM ('PASSED', 'FAILED', 'PENDING');
+
+-- CreateEnum
+CREATE TYPE "HealthTier" AS ENUM ('EXCELLENT', 'GOOD', 'AVERAGE', 'ATTENTION_REQUIRED', 'CRITICAL');
 
 -- CreateTable
 CREATE TABLE "User" (
@@ -98,7 +101,7 @@ CREATE TABLE "Robot" (
     "code" TEXT NOT NULL,
     "name" TEXT NOT NULL,
     "model" TEXT NOT NULL,
-    "status" "RobotStatus" NOT NULL DEFAULT 'INACTIVE',
+    "status" "RobotStatus" NOT NULL DEFAULT 'MANUFACTURED',
     "lat" DOUBLE PRECISION NOT NULL,
     "lng" DOUBLE PRECISION NOT NULL,
     "ownerId" TEXT,
@@ -106,8 +109,15 @@ CREATE TABLE "Robot" (
     "battery" INTEGER NOT NULL DEFAULT 100,
     "qrCode" TEXT,
     "imageUrl" TEXT,
+    "firmwareVersion" TEXT DEFAULT '1.0.0',
     "hardwareVersion" TEXT DEFAULT 'v1.0',
+    "manufacturingBatch" TEXT,
+    "macAddress" TEXT,
     "manufactureDate" TIMESTAMP(3),
+    "qualityInspectionStatus" TEXT DEFAULT 'PENDING',
+    "factoryCalibrationStatus" TEXT DEFAULT 'PENDING',
+    "factoryOperator" TEXT,
+    "productionLocation" TEXT,
     "warrantyStatus" TEXT DEFAULT 'ACTIVE',
     "lastMaintenanceAt" TIMESTAMP(3),
     "lastUpdated" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -147,6 +157,59 @@ CREATE TABLE "RobotActivation" (
 );
 
 -- CreateTable
+CREATE TABLE "FactoryTestResult" (
+    "id" TEXT NOT NULL,
+    "robotId" TEXT NOT NULL,
+    "testType" "FactoryTestType" NOT NULL,
+    "status" "TestStatus" NOT NULL,
+    "value" DOUBLE PRECISION,
+    "notes" TEXT,
+    "testedBy" TEXT,
+    "testedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deletedAt" TIMESTAMP(3),
+
+    CONSTRAINT "FactoryTestResult_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "DeviceHealthScore" (
+    "id" TEXT NOT NULL,
+    "robotId" TEXT NOT NULL,
+    "overallScore" INTEGER NOT NULL,
+    "batteryScore" INTEGER NOT NULL,
+    "sensorScore" INTEGER NOT NULL,
+    "relayScore" INTEGER NOT NULL,
+    "pumpScore" INTEGER NOT NULL,
+    "fanScore" INTEGER NOT NULL,
+    "firmwareScore" INTEGER NOT NULL,
+    "maintenanceScore" INTEGER NOT NULL,
+    "runtimeScore" INTEGER NOT NULL,
+    "communicationScore" INTEGER NOT NULL,
+    "alertScore" INTEGER NOT NULL,
+    "tier" "HealthTier" NOT NULL,
+    "calculatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deletedAt" TIMESTAMP(3),
+
+    CONSTRAINT "DeviceHealthScore_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "LifecycleEvent" (
+    "id" TEXT NOT NULL,
+    "robotId" TEXT NOT NULL,
+    "fromStatus" "RobotStatus" NOT NULL,
+    "toStatus" "RobotStatus" NOT NULL,
+    "triggeredBy" TEXT,
+    "reason" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "deletedAt" TIMESTAMP(3),
+
+    CONSTRAINT "LifecycleEvent_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "SensorReading" (
     "id" TEXT NOT NULL,
     "robotId" TEXT NOT NULL,
@@ -159,9 +222,16 @@ CREATE TABLE "SensorReading" (
     "current" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "voltage" DOUBLE PRECISION NOT NULL DEFAULT 220,
     "motorStatus" TEXT NOT NULL DEFAULT 'OFF',
+    "pumpStatus" TEXT NOT NULL DEFAULT 'OFF',
+    "relayStatus" TEXT NOT NULL DEFAULT 'OFF',
+    "fanStatus" TEXT NOT NULL DEFAULT 'OFF',
+    "movementState" TEXT NOT NULL DEFAULT 'STATIONARY',
+    "currentMode" TEXT NOT NULL DEFAULT 'AUTOMATIC',
     "obstacle" BOOLEAN NOT NULL DEFAULT false,
     "irDetection" BOOLEAN NOT NULL DEFAULT false,
     "signalStrength" INTEGER NOT NULL DEFAULT -50,
+    "firmwareVersion" TEXT DEFAULT '1.0.0',
+    "hardwareRevision" TEXT DEFAULT 'v1.0',
     "runtime" INTEGER NOT NULL DEFAULT 0,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "deletedAt" TIMESTAMP(3),
@@ -541,6 +611,18 @@ CREATE INDEX "RobotActivation_code_idx" ON "RobotActivation"("code");
 CREATE INDEX "RobotActivation_expiresAt_idx" ON "RobotActivation"("expiresAt");
 
 -- CreateIndex
+CREATE INDEX "FactoryTestResult_robotId_idx" ON "FactoryTestResult"("robotId");
+
+-- CreateIndex
+CREATE INDEX "FactoryTestResult_robotId_testType_idx" ON "FactoryTestResult"("robotId", "testType");
+
+-- CreateIndex
+CREATE INDEX "DeviceHealthScore_robotId_calculatedAt_idx" ON "DeviceHealthScore"("robotId", "calculatedAt" DESC);
+
+-- CreateIndex
+CREATE INDEX "LifecycleEvent_robotId_createdAt_idx" ON "LifecycleEvent"("robotId", "createdAt" DESC);
+
+-- CreateIndex
 CREATE INDEX "SensorReading_robotId_createdAt_idx" ON "SensorReading"("robotId", "createdAt" DESC);
 
 -- CreateIndex
@@ -688,6 +770,15 @@ ALTER TABLE "RobotActivation" ADD CONSTRAINT "RobotActivation_robotId_fkey" FORE
 ALTER TABLE "RobotActivation" ADD CONSTRAINT "RobotActivation_activatedBy_fkey" FOREIGN KEY ("activatedBy") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
+ALTER TABLE "FactoryTestResult" ADD CONSTRAINT "FactoryTestResult_robotId_fkey" FOREIGN KEY ("robotId") REFERENCES "Robot"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "DeviceHealthScore" ADD CONSTRAINT "DeviceHealthScore_robotId_fkey" FOREIGN KEY ("robotId") REFERENCES "Robot"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "LifecycleEvent" ADD CONSTRAINT "LifecycleEvent_robotId_fkey" FOREIGN KEY ("robotId") REFERENCES "Robot"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
 ALTER TABLE "SensorReading" ADD CONSTRAINT "SensorReading_robotId_fkey" FOREIGN KEY ("robotId") REFERENCES "Robot"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
@@ -731,4 +822,3 @@ ALTER TABLE "AuditLog" ADD CONSTRAINT "AuditLog_userId_fkey" FOREIGN KEY ("userI
 
 -- AddForeignKey
 ALTER TABLE "UserSetting" ADD CONSTRAINT "UserSetting_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
