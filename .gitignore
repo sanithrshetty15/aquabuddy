@@ -34,3 +34,12 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# backend
+/aquabuddy-backend/node_modules
+/aquabuddy-backend/dist
+/aquabuddy-backend/.env
+/aquabuddy-backend/prisma/seed.js
+/aquabuddy-backend/prisma/seed.js.map
+/aquabuddy-backend/prisma/seed.d.ts
+/aquabuddy-backend/prisma/seed.d.ts.map

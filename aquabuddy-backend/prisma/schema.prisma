@@ -1,0 +1,722 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ─── Enums ────────────────────────────────────────────────────
+
+enum UserRole {
+  OWNER
+  ADMIN
+  USER
+}
+
+enum RobotStatus {
+  MANUFACTURED
+  TESTING
+  READY
+  ACTIVATED
+  ONLINE
+  OFFLINE
+  MAINTENANCE
+  FIRMWARE_UPDATE
+  SERVICE
+  RETIRED
+}
+
+enum CommandStatus {
+  PENDING
+  ACCEPTED
+  EXECUTING
+  COMPLETED
+  FAILED
+  TIMEOUT
+  CANCELLED
+}
+
+enum AlertType {
+  TEMPERATURE_HIGH
+  HUMIDITY_LOW
+  TANK_FULL
+  TANK_EMPTY
+  SYSTEM_ERROR
+  LEAK_DETECTED
+  BATTERY_LOW
+  PUMP_FAILURE
+  RELAY_FAILURE
+  SENSOR_FAILURE
+  OBSTACLE_DETECTED
+  IR_TRIGGERED
+  COMMUNICATION_LOST
+  EMERGENCY_STOP
+  FIRMWARE_FAILURE
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+
+enum AlertStatus {
+  ACTIVE
+  ACKNOWLEDGED
+  RESOLVED
+}
+
+enum FeedbackStatus {
+  NEW
+  REVIEWED
+  RESPONDED
+}
+
+enum FirmwareStatus {
+  DRAFT
+  RELEASED
+  DEPRECATED
+  ROLLED_BACK
+}
+
+enum DeploymentStatus {
+  PENDING
+  DOWNLOADING
+  INSTALLING
+  SUCCESS
+  FAILED
+  ROLLED_BACK
+}
+
+enum LogLevel {
+  DEBUG
+  INFO
+  WARN
+  ERROR
+  FATAL
+}
+
+enum NotificationPriority {
+  LOW
+  NORMAL
+  HIGH
+  URGENT
+}
+
+enum RevenueType {
+  SUBSCRIPTION
+  ONE_TIME
+  MAINTENANCE
+  FIRMWARE
+  OTHER
+}
+
+// ─── User & Auth ──────────────────────────────────────────────
+
+model User {
+  id             String            @id @default(uuid())
+  supabaseUserId String?           @unique
+  email          String            @unique
+  password       String
+  firstName      String
+  lastName       String
+  phone          String?
+  country        String?
+  city           String?
+  timezone       String?           @default("UTC")
+  theme          String?           @default("system")
+  language       String?           @default("en")
+  avatarUrl      String?
+  role           UserRole          @default(USER)
+  status         String            @default("ACTIVE")
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+  deletedAt      DateTime?
+
+  robots         Robot[]
+  refreshTokens  RefreshToken[]
+  feedbacks      Feedback[]
+  auditLogs      AuditLog[]
+  sessions       Session[]
+  setting        UserSetting?
+  notifications  Notification[]
+  serviceRecords  ServiceHistory[]
+  firmwareUploads FirmwareRecord[]
+  robotActivations RobotActivation[]
+
+  @@index([email])
+  @@index([role, status])
+  @@index([deletedAt])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  @@index([token])
+  @@index([userId])
+}
+
+model Session {
+  id             String    @id @default(uuid())
+  token          String    @unique
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ipAddress      String?
+  userAgent      String?
+  refreshToken   String?
+  expiresAt      DateTime
+  lastActivityAt DateTime  @default(now())
+  createdAt      DateTime  @default(now())
+  deletedAt      DateTime?
+
+  @@index([token])
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+// ─── Robot Core ───────────────────────────────────────────────
+
+model Robot {
+  id                String            @id @default(uuid())
+  code              String            @unique
+  name              String
+  model             String
+  status            RobotStatus       @default(MANUFACTURED)
+  lat               Float
+  lng               Float
+  ownerId           String?
+  owner             User?             @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  waterGenerated    Float             @default(0)
+  battery           Int               @default(100)
+  qrCode            String?
+  imageUrl          String?
+  firmwareVersion   String?           @default("1.0.0")
+  hardwareVersion   String?           @default("v1.0")
+  manufacturingBatch String?
+  macAddress        String?
+  manufactureDate   DateTime?
+  qualityInspectionStatus String?     @default("PENDING")
+  factoryCalibrationStatus String?   @default("PENDING")
+  factoryOperator   String?
+  productionLocation String?
+  warrantyStatus    String?           @default("ACTIVE")
+  lastMaintenanceAt DateTime?
+  lastUpdated       DateTime          @default(now())
+  createdAt         DateTime          @default(now())
+  updatedAt         DateTime          @updatedAt
+  deletedAt         DateTime?
+
+  commands          RobotCommand[]
+  maintenance       MaintenanceLog[]
+  readings          SensorReading[]
+  predictions       Prediction[]
+  alerts            Alert[]
+  activation        RobotActivation?
+  analytics         RobotAnalytics[]
+  serviceHistory    ServiceHistory[]
+  firmwareDeployments RobotFirmwareDeployment[]
+  logs              RobotLog[]
+  factoryTests      FactoryTestResult[]
+  healthScores      DeviceHealthScore[]
+  lifecycleEvents   LifecycleEvent[]
+
+  @@index([code])
+  @@index([ownerId, status])
+  @@index([status, deletedAt])
+  @@index([model])
+}
+
+model RobotCommand {
+  id         String        @id @default(uuid())
+  robotId    String
+  robot      Robot         @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  command    String
+  payload    String?
+  status     CommandStatus @default(PENDING)
+  executedAt DateTime?
+  createdAt  DateTime      @default(now())
+  deletedAt  DateTime?
+
+  @@index([robotId, status])
+  @@index([robotId, createdAt(sort: Desc)])
+}
+
+model RobotActivation {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  robotId     String   @unique
+  robot       Robot    @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  activatedBy String?
+  activator   User?    @relation(fields: [activatedBy], references: [id], onDelete: SetNull)
+  activatedAt DateTime?
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+  deletedAt   DateTime?
+
+  @@index([code])
+  @@index([expiresAt])
+}
+
+// ─── Factory Testing ──────────────────────────────────────────
+
+enum FactoryTestType {
+  SENSOR_TEST
+  RELAY_TEST
+  PUMP_TEST
+  FAN_TEST
+  DISPLAY_TEST
+  WIFI_TEST
+  POWER_TEST
+  BATTERY_TEST
+  MOVEMENT_TEST
+  OBSTACLE_DETECTION
+  IR_DETECTION
+  WATER_COLLECTION_TEST
+  CALIBRATION_TEST
+}
+
+enum TestStatus {
+  PASSED
+  FAILED
+  PENDING
+}
+
+model FactoryTestResult {
+  id        String          @id @default(uuid())
+  robotId   String
+  robot     Robot           @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  testType  FactoryTestType
+  status    TestStatus
+  value     Float?
+  notes     String?
+  testedBy  String?
+  testedAt  DateTime        @default(now())
+  createdAt DateTime        @default(now())
+  deletedAt DateTime?
+
+  @@index([robotId])
+  @@index([robotId, testType])
+}
+
+// ─── Device Health ────────────────────────────────────────────
+
+enum HealthTier {
+  EXCELLENT
+  GOOD
+  AVERAGE
+  ATTENTION_REQUIRED
+  CRITICAL
+}
+
+model DeviceHealthScore {
+  id                 String      @id @default(uuid())
+  robotId            String
+  robot              Robot       @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  overallScore       Int
+  batteryScore       Int
+  sensorScore        Int
+  relayScore         Int
+  pumpScore          Int
+  fanScore           Int
+  firmwareScore      Int
+  maintenanceScore   Int
+  runtimeScore       Int
+  communicationScore Int
+  alertScore         Int
+  tier               HealthTier
+  calculatedAt       DateTime    @default(now())
+  createdAt          DateTime    @default(now())
+  deletedAt          DateTime?
+
+  @@index([robotId, calculatedAt(sort: Desc)])
+}
+
+// ─── Lifecycle Audit ──────────────────────────────────────────
+
+model LifecycleEvent {
+  id         String       @id @default(uuid())
+  robotId    String
+  robot      Robot        @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  fromStatus RobotStatus
+  toStatus   RobotStatus
+  triggeredBy String?
+  reason     String?
+  createdAt  DateTime     @default(now())
+  deletedAt  DateTime?
+
+  @@index([robotId, createdAt(sort: Desc)])
+}
+
+// ─── Telemetry & Analytics ────────────────────────────────────
+
+model SensorReading {
+  id               String    @id @default(uuid())
+  robotId          String
+  robot            Robot     @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  humidity         Float
+  temperature      Float
+  waterFlow        Float
+  waterLevel       Float
+  powerConsumption Float
+  battery          Int       @default(100)
+  current          Float     @default(0)
+  voltage          Float     @default(220)
+  motorStatus      String    @default("OFF")
+  pumpStatus       String    @default("OFF")
+  relayStatus      String    @default("OFF")
+  fanStatus        String    @default("OFF")
+  movementState    String    @default("STATIONARY")
+  currentMode      String    @default("AUTOMATIC")
+  obstacle         Boolean   @default(false)
+  irDetection      Boolean   @default(false)
+  signalStrength   Int       @default(-50)
+  firmwareVersion  String?   @default("1.0.0")
+  hardwareRevision String?   @default("v1.0")
+  runtime          Int       @default(0)
+  createdAt        DateTime  @default(now())
+  deletedAt        DateTime?
+
+  @@index([robotId, createdAt(sort: Desc)])
+}
+
+model RobotAnalytics {
+  id                  String   @id @default(uuid())
+  robotId             String
+  robot               Robot    @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  date                DateTime
+  totalWaterGenerated Float
+  averageHumidity     Float
+  averageTemperature  Float
+  totalPowerConsumed  Float
+  averageBattery      Float
+  minBattery          Int
+  maxBattery          Int
+  alertCount          Int      @default(0)
+  runtimeHours        Float    @default(0)
+  uptimePercentage    Float    @default(100)
+  createdAt           DateTime @default(now())
+  deletedAt           DateTime?
+
+  @@unique([robotId, date])
+  @@index([robotId, date(sort: Desc)])
+}
+
+model AnalyticsSnapshot {
+  id                  String   @id @default(uuid())
+  date                DateTime @unique
+  totalWaterGenerated Float
+  averageHumidity     Float
+  averageTemperature  Float
+  totalActiveRobots   Int
+  totalPowerConsumed  Float
+  newUsers            Int      @default(0)
+  totalRevenue        Float    @default(0)
+  createdAt           DateTime @default(now())
+  deletedAt           DateTime?
+
+  @@index([date(sort: Desc)])
+}
+
+model Prediction {
+  id         String    @id @default(uuid())
+  robotId    String
+  robot      Robot     @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  type       String
+  targetDate DateTime
+  value      Float
+  confidence Float
+  createdAt  DateTime  @default(now())
+  deletedAt  DateTime?
+
+  @@index([robotId, targetDate])
+}
+
+// ─── Alerts & Logs ────────────────────────────────────────────
+
+model Alert {
+  id         String        @id @default(uuid())
+  robotId    String
+  robot      Robot         @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  type       AlertType
+  severity   AlertSeverity
+  message    String
+  status     AlertStatus   @default(ACTIVE)
+  resolvedAt DateTime?
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
+  deletedAt  DateTime?
+
+  @@index([robotId, status])
+  @@index([robotId, createdAt(sort: Desc)])
+  @@index([severity, status])
+}
+
+model RobotLog {
+  id        String    @id @default(uuid())
+  robotId   String
+  robot     Robot     @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  level     LogLevel  @default(INFO)
+  message   String
+  meta      String?
+  source    String?   @default("system")
+  createdAt DateTime  @default(now())
+  deletedAt DateTime?
+
+  @@index([robotId, createdAt(sort: Desc)])
+  @@index([level, createdAt(sort: Desc)])
+}
+
+model SystemLog {
+  id        String    @id @default(uuid())
+  level     String
+  message   String
+  meta      String?
+  timestamp DateTime  @default(now())
+  deletedAt DateTime?
+}
+
+// ─── Maintenance & Service ────────────────────────────────────
+
+model MaintenanceLog {
+  id                     String    @id @default(uuid())
+  robotId                String
+  robot                  Robot     @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  type                   String
+  description            String
+  technician             String?
+  status                 String
+  scheduledAt            DateTime
+  completedAt            DateTime?
+  installationDate       DateTime?
+  warrantyExpiry         DateTime?
+  partsReplaced          String?
+  lifetimeWaterGenerated Float     @default(0)
+  lifetimeRuntime        Int       @default(0)
+  pumpRuntime            Int       @default(0)
+  fanRuntime             Int       @default(0)
+  relayCycles            Int       @default(0)
+  batteryHealth          String?   @default("Good")
+  sensorHealth           String?   @default("Nominal")
+  errorHistory           String?
+  downtime               Int       @default(0)
+  efficiencyHistory      String?
+  createdAt              DateTime  @default(now())
+  deletedAt              DateTime?
+
+  @@index([robotId, createdAt(sort: Desc)])
+  @@index([robotId, status])
+}
+
+model ServiceHistory {
+  id              String    @id @default(uuid())
+  robotId         String
+  robot           Robot     @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  serviceType     String
+  description     String
+  performedBy     String?
+  technician      User?     @relation(fields: [performedBy], references: [id], onDelete: SetNull)
+  partsReplaced   String?
+  cost            Float?
+  notes           String?
+  documentUrl     String?
+  performedAt     DateTime
+  nextServiceDue  DateTime?
+  createdAt       DateTime  @default(now())
+  deletedAt       DateTime?
+
+  @@index([robotId, performedAt(sort: Desc)])
+  @@index([robotId, serviceType])
+}
+
+// ─── Firmware ─────────────────────────────────────────────────
+
+model FirmwareRecord {
+  id                 String        @id @default(uuid())
+  version            String
+  robotModel         String
+  fileUrl            String
+  fileSize           Int
+  checksum           String
+  changelog          String?
+  status             FirmwareStatus @default(DRAFT)
+  uploadedBy         String?
+  uploader           User?         @relation(fields: [uploadedBy], references: [id], onDelete: SetNull)
+  minHardwareVersion String?
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  deletedAt          DateTime?
+
+  deployments   RobotFirmwareDeployment[]
+
+  @@unique([version, robotModel])
+  @@index([status])
+  @@index([robotModel, status])
+}
+
+model RobotFirmwareDeployment {
+  id            String           @id @default(uuid())
+  robotId       String
+  robot         Robot            @relation(fields: [robotId], references: [id], onDelete: Cascade)
+  firmwareId    String
+  firmware      FirmwareRecord   @relation(fields: [firmwareId], references: [id], onDelete: Restrict)
+  status        DeploymentStatus @default(PENDING)
+  errorMessage  String?
+  deployedAt    DateTime?
+  completedAt   DateTime?
+  createdAt     DateTime         @default(now())
+  deletedAt     DateTime?
+
+  @@unique([robotId, firmwareId])
+  @@index([robotId, status])
+  @@index([firmwareId, status])
+}
+
+// ─── Notifications & Feedback ─────────────────────────────────
+
+model Notification {
+  id        String              @id @default(uuid())
+  userId    String
+  user      User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      String
+  title     String
+  message   String
+  priority  NotificationPriority @default(NORMAL)
+  isRead    Boolean             @default(false)
+  readAt    DateTime?
+  createdAt DateTime            @default(now())
+  deletedAt DateTime?
+
+  @@index([userId, isRead])
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([priority])
+}
+
+model Feedback {
+  id            String         @id @default(uuid())
+  userId        String
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject       String
+  message       String
+  rating        Int?
+  category      String?
+  attachmentUrl String?
+  status        FeedbackStatus @default(NEW)
+  response      String?
+  respondedAt   DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  deletedAt     DateTime?
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([status])
+  @@index([category])
+}
+
+// ─── Audit & Security ─────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  userId     String?
+  user       User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action     String
+  resource   String?
+  resourceId String?
+  ipAddress  String?
+  userAgent  String?
+  details    String?
+  createdAt  DateTime @default(now())
+  deletedAt  DateTime?
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([action])
+  @@index([resource, resourceId])
+  @@index([createdAt(sort: Desc)])
+}
+
+// ─── Settings ─────────────────────────────────────────────────
+
+model UserSetting {
+  id            String   @id @default(uuid())
+  userId        String   @unique
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  preferences   Json?    @default("{}")
+  notifications Json?    @default("{}")
+  privacy       Json?    @default("{}")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  deletedAt     DateTime?
+}
+
+model PlatformSetting {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  value       Json
+  type        String   @default("string")
+  description String?
+  isPublic    Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@index([key])
+  @@index([isPublic])
+}
+
+// ─── System ───────────────────────────────────────────────────
+
+model SystemHealth {
+  id        String   @id @default(uuid())
+  component String
+  status    String
+  message   String?
+  latencyMs Int?
+  checkedAt DateTime @default(now())
+  createdAt DateTime @default(now())
+  deletedAt DateTime?
+
+  @@index([component, checkedAt(sort: Desc)])
+  @@index([component, status])
+}
+
+model FeatureFlag {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  enabled     Boolean  @default(false)
+  name        String
+  description String?
+  conditions  Json?    @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  deletedAt   DateTime?
+
+  @@index([key])
+  @@index([enabled])
+}
+
+// ─── Revenue ──────────────────────────────────────────────────
+
+model Revenue {
+  id             String       @id @default(uuid())
+  type           RevenueType  @default(OTHER)
+  description    String
+  amount         Float
+  currency       String       @default("USD")
+  referenceId    String?
+  referenceType  String?
+  date           DateTime     @default(now())
+  metadata       Json?        @default("{}")
+  createdAt      DateTime     @default(now())
+  deletedAt      DateTime?
+
+  @@index([date(sort: Desc)])
+  @@index([type])
+  @@index([referenceType, referenceId])
+}

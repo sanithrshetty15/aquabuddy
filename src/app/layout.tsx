@@ -5,6 +5,8 @@ import 'leaflet/dist/leaflet.css';
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css';
 import { ThemeProvider } from "@/components/theme-provider";
 import { Footer } from "@/components/Footer";
+import { SecurityProvider } from "@/components/SecurityProvider";
+import { ClerkWrapper } from "@/components/ClerkWrapper";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-inter" });
 
@@ -27,8 +29,12 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          {children}
-          <Footer />
+          <ClerkWrapper>
+            <SecurityProvider>
+              {children}
+              <Footer />
+            </SecurityProvider>
+          </ClerkWrapper>
         </ThemeProvider>
       </body>
     </html>

@@ -3,35 +3,33 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowRight, Eye, EyeOff, Loader2 } from "lucide-react";
-import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { useAuth } from "@/hooks/useAuth";
+import { Navbar } from "@/components/Navbar";
+import { ClerkSocialButtons } from "@/components/ClerkSocialButtons";
 
 export default function LoginPage() {
-  const router = useRouter();
-  const [isLoading, setIsLoading] = useState(false);
+  const { login, isLoading, error: authError } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
+  const [localError, setLocalError] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) {
-      setError("Please fill in all fields.");
+      setLocalError("Please fill in all fields.");
       return;
     }
-    setError("");
-    setIsLoading(true);
-
-    // Mock authentication delay
-    setTimeout(() => {
-      setIsLoading(false);
-      router.push("/dashboard");
-    }, 1500);
+    setLocalError("");
+    await login({ email, password });
   };
 
+  const displayError = localError || authError;
+
   return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center relative overflow-hidden selection:bg-[#00D6FF] selection:text-black px-6">
+    <div className="min-h-screen bg-[#050505] flex flex-col items-center justify-center relative overflow-hidden selection:bg-[#00D6FF] selection:text-black px-6 pt-20">
+      <Navbar />
 
       {/* 
         ==============================
@@ -68,7 +66,16 @@ export default function LoginPage() {
 
         {/* Brand Logo Header */}
         <div className="flex items-center gap-3 mb-8">
-          <Image src="/favicon.ico" alt="AquaBuddy" width={48} height={48} className="w-12 h-12 object-contain invert brightness-0" priority />
+          <div className="w-12 h-12 bg-white/10 rounded-xl flex items-center justify-center backdrop-blur-md border border-white/10">
+            <Image
+              src="/assets/logo.png"
+              alt="AquaBuddy Logo"
+              width={32}
+              height={32}
+              className="w-8 h-8 object-contain"
+              priority
+            />
+          </div>
           <span className="text-2xl tracking-[0.2em] font-light uppercase text-white">AquaBuddy</span>
         </div>
 
@@ -83,10 +90,10 @@ export default function LoginPage() {
             <p className="text-gray-400 font-light text-sm md:text-base">Sign in to your control center.</p>
           </div>
 
-          {error && (
+          {displayError && (
             <div className="mb-6 p-4 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-sm flex items-center gap-2">
               <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
-              {error}
+              {displayError}
             </div>
           )}
 
@@ -101,7 +108,7 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@company.com"
-                  className="w-full px-5 py-3.5 bg-black/40 border border-white/10 rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#00D6FF] focus:border-[#00D6FF] transition-all"
+                  className="w-full px-4 py-3 bg-black/40 border border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#00D6FF] focus:border-transparent transition-all"
                 />
               </div>
             </div>
@@ -115,7 +122,7 @@ export default function LoginPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-5 pr-12 py-3.5 bg-black/40 border border-white/10 rounded-xl text-white placeholder:text-gray-600 focus:outline-none focus:ring-1 focus:ring-[#00D6FF] focus:border-[#00D6FF] transition-all"
+                  className="w-full pl-4 pr-12 py-3 bg-black/40 border border-white/10 rounded-xl text-white placeholder:text-gray-500 focus:outline-none focus:ring-2 focus:ring-[#00D6FF] focus:border-transparent transition-all"
                 />
                 <button
                   type="button"
@@ -150,18 +157,18 @@ export default function LoginPage() {
             <button
               disabled={isLoading}
               type="submit"
-              className="w-full flex items-center justify-center gap-2 py-3.5 mt-8 bg-white text-black hover:bg-gray-200 disabled:opacity-70 disabled:hover:bg-white rounded-xl font-bold transition-all relative overflow-hidden group shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_25px_rgba(255,255,255,0.2)]"
+              className="w-full flex items-center justify-center gap-2 py-4 mt-4 bg-gradient-to-r from-[#0066CC] to-[#00D6FF] text-white rounded-xl font-semibold hover:opacity-90 disabled:opacity-70 disabled:hover:opacity-90 transition-all shadow-[0_0_20px_rgba(0,66,204,0.3)] cursor-pointer"
             >
               {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin relative z-10" />
+                <Loader2 className="w-5 h-5 animate-spin" />
               ) : (
                 <>
-                  <span className="relative z-10 text-sm">Sign In</span>
-                  <ArrowRight className="w-4 h-4 relative z-10 group-hover:translate-x-1 transition-transform" />
+                  Sign In <ArrowRight className="w-4 h-4 ml-1 transition-transform group-hover:translate-x-1" />
                 </>
               )}
             </button>
           </form>
+          <ClerkSocialButtons />
         </div>
 
         {/* Footer Text */}
